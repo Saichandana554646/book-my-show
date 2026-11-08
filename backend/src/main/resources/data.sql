@@ -1,0 +1,871 @@
+insert into cities(name) values('Hyderabad') on conflict(name) do nothing;
+insert into theatres(name,address,city_id,latitude,longitude) select 'BMS Cinemas','Hitech City, Hyderabad',id,17.4435,78.3772 from cities where name='Hyderabad' and not exists(select 1 from theatres);
+update theatres set latitude=17.4435,longitude=78.3772 where name='BMS Cinemas' and latitude is null;
+insert into screens(name,total_seats,theatre_id) select 'Screen 1',60,id from theatres where name='BMS Cinemas' and not exists(select 1 from screens);
+
+-- Retire the original placeholder demo movie now that real titles are seeded below.
+update movies set active=false where title='The Last Journey';
+
+-- Real, recent (2026) Indian theatrical releases, seeded idempotently by title.
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating)
+select 'The Paradise','Telugu action epic starring Nani and Raghav Juyal, directed by Srikanth Odela. Released 24 September 2026.','https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=800&q=80','Telugu','Action',170,'UA',7.7
+where not exists(select 1 from movies where title='The Paradise');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating)
+select 'Irumudi','Telugu action drama starring Ravi Teja and Priya Bhavani Shankar, directed by Shiva Nirvana. A father-daughter story set around the Ayyappa Deeksha pilgrimage.','https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=800&q=80','Telugu','Action Drama',160,'UA16+',8.0
+where not exists(select 1 from movies where title='Irumudi');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating)
+select 'Mandaadi','Tamil sports action drama starring Soori and Sathyaraj, directed by Mathimaran Pugazhendhi, set against coastal Tamil Nadu boat racing.','https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?auto=format&fit=crop&w=800&q=80','Tamil','Sports Action',154,'UA16+',7.4
+where not exists(select 1 from movies where title='Mandaadi');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating)
+select 'Madhuvidhu','Malayalam romantic comedy starring Sharaf U Dheen, directed by Vishnu Aravind. Released 23 April 2026.','https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?auto=format&fit=crop&w=800&q=80','Malayalam','Romantic Comedy',128,'UA',7.1
+where not exists(select 1 from movies where title='Madhuvidhu');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating)
+select 'Sathi Leelavathi','Telugu romantic comedy starring Lavanya Tripathi and Dev Mohan, directed by Tatineni Satya. Released 8 May 2026.','https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=800&q=80','Telugu','Romantic Comedy',131,'UA',6.8
+where not exists(select 1 from movies where title='Sathi Leelavathi');
+
+-- Retired: only had a generic stock-photo poster, no real official artwork available.
+update movies set active=false where title in ('Madhuvidhu','Sathi Leelavathi');
+update movies set active=false where title='Mandaadi';
+
+-- Coming Soon: announced/upcoming releases with real official poster art, not yet
+-- in theatres so they carry no shows. Frontend splits Now Showing vs Coming Soon
+-- on the 'upcoming' flag.
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Spirit','Cop action drama starring Prabhas as an IPS officer, with Triptii Dimri and Prakash Raj, directed by Sandeep Reddy Vanga (T-Series/Bhadrakali Pictures). Releasing 5 March 2027.','/posters/spirit.jpg','Telugu','Action',0,'A',0,true
+where not exists(select 1 from movies where title='Spirit');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'OG 2','Announced sequel to "OG - They Call Him OG", starring Power Star Pawan Kalyan, written and directed by Sujeeth. Release date not yet announced.','/posters/og2.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='OG 2');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Varanasi','SS Rajamouli''s next, starring Mahesh Babu as Rudhra, produced by Sri Durga Arts. Releasing 2027 (#GlobeTrotter).','/posters/varanasi.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Varanasi');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'RC17','Untitled next film from Global Star Ram Charan and director Sukumar (Mythri Movie Makers), music by Devi Sri Prasad. Title and release date not yet announced.','/posters/rc17.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='RC17');
+
+-- Fix a spelling mistake from an earlier seed: the real title is "Raaka", not "Daaka".
+-- Must run BEFORE the insert below, so its NOT EXISTS check sees the renamed row
+-- instead of creating a duplicate.
+update movies set title='Raaka', poster_url='/posters/raaka.jpg' where title='Daaka';
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Raaka','Announced next film starring Icon Star Allu Arjun, directed by Atlee, presented by Kalanithi Maran''s Sun Pictures. Release date not yet announced.','/posters/raaka.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Raaka');
+
+-- Real official poster art (served as static site assets, no external CDN needed)
+update movies set poster_url='/posters/the-paradise.jpg' where title='The Paradise';
+update movies set poster_url='/posters/irumudi.jpg' where title='Irumudi';
+update movies set poster_url='/posters/mandaadi.jpg' where title='Mandaadi';
+
+-- Real Hyderabad theatre network (single screens + multiplexes), concentrated around
+-- KPHB/JNTU/Kukatpally/Miyapur with a few farther ones for distance variety.
+-- Distance-from-me is computed live in the browser from the viewer's actual
+-- geolocation (see TheatreMap.haversineKm) - nothing here is a fixed reference point.
+insert into theatres(name,address,city_id,latitude,longitude)
+select v.name,v.address,c.id,v.lat,v.lon from cities c cross join (values
+  ('Arjun 70MM','Kukatpally, Hyderabad',17.4855,78.4095),
+  ('Viswanath Theatre 70mm A/C','Kukatpally, Hyderabad',17.4862,78.4110),
+  ('Mallikarjuna 70mm A/C DTS','Kukatpally, Hyderabad',17.4845,78.4080),
+  ('Sri Sai 35MM','Miyapur, Hyderabad',17.4970,78.3760),
+  ('Sandhya 70MM','Ameerpet, Hyderabad',17.4374,78.4487),
+  ('Sudarshan 35MM','RTC X Roads, Hyderabad',17.3925,78.4972),
+  ('PVR: Manjeera Trinity Mall','KPHB Colony, Hyderabad',17.4939,78.3958),
+  ('INOX: The Forum Sujana Mall','Kukatpally, Hyderabad',17.4930,78.4020),
+  ('Miraj Cinemas: Cinetown','Miyapur, Hyderabad',17.4959,78.3745),
+  ('Miraj Cinemas: A2A Central Mall','Balanagar, Hyderabad',17.4645,78.4460),
+  ('AMB Cinemas','Gachibowli, Hyderabad',17.4479,78.3489),
+  ('Prasads Multiplex','Khairtabad, Hyderabad',17.4128,78.4659),
+  ('Cinepolis: DSL Virtue Mall','Uppal, Hyderabad',17.4058,78.5591)
+) as v(name,address,lat,lon)
+where c.name='Hyderabad' and not exists(select 1 from theatres t where t.name=v.name);
+
+insert into screens(name,total_seats,theatre_id)
+select 'Screen 1',60,t.id from theatres t
+where t.name in ('Arjun 70MM','Viswanath Theatre 70mm A/C','Mallikarjuna 70mm A/C DTS','Sri Sai 35MM',
+                  'Sandhya 70MM','Sudarshan 35MM','PVR: Manjeera Trinity Mall','INOX: The Forum Sujana Mall',
+                  'Miraj Cinemas: Cinetown','Miraj Cinemas: A2A Central Mall','AMB Cinemas','Prasads Multiplex',
+                  'Cinepolis: DSL Virtue Mall')
+and not exists(select 1 from screens sc where sc.theatre_id=t.id);
+
+-- Shows: one showtime per (movie, theatre) pair below, idempotent on that exact pair
+-- so re-running this file never creates duplicates. "The Paradise" (this week's big
+-- release) plays widest, like a real BMS listing; the rest play at a smaller spread.
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,sc.id,current_date+1,v.start_time::time,v.end_time::time,v.price
+from movies m join (values
+  ('The Paradise','Arjun 70MM','20:30','23:24',180),
+  ('The Paradise','Mallikarjuna 70mm A/C DTS','21:00','23:54',180),
+  ('The Paradise','Viswanath Theatre 70mm A/C','18:00','20:54',170),
+  ('The Paradise','PVR: Manjeera Trinity Mall','19:15','22:09',240),
+  ('The Paradise','INOX: The Forum Sujana Mall','16:00','18:54',240),
+  ('The Paradise','AMB Cinemas','19:15','22:09',280),
+  ('Irumudi','Sri Sai 35MM','18:30','21:10',170),
+  ('Irumudi','Miraj Cinemas: Cinetown','21:00','23:40',220),
+  ('Irumudi','INOX: The Forum Sujana Mall','15:30','18:10',230),
+  ('Irumudi','Prasads Multiplex','20:15','22:55',260),
+  ('Mandaadi','Sandhya 70MM','19:00','21:34',160),
+  ('Mandaadi','Miraj Cinemas: A2A Central Mall','16:45','19:19',210),
+  ('Mandaadi','Viswanath Theatre 70mm A/C','20:30','23:04',160),
+  ('Madhuvidhu','PVR: Manjeera Trinity Mall','13:00','15:08',200),
+  ('Madhuvidhu','Sudarshan 35MM','17:15','19:23',150),
+  ('Madhuvidhu','AMB Cinemas','20:30','22:38',250),
+  ('Sathi Leelavathi','Cinepolis: DSL Virtue Mall','18:45','20:56',220),
+  ('Sathi Leelavathi','Mallikarjuna 70mm A/C DTS','20:00','22:11',170),
+  ('Sathi Leelavathi','Miraj Cinemas: Cinetown','14:30','16:41',210)
+) as v(movie_title,theatre_name,start_time,end_time,price) on v.movie_title=m.title
+join theatres t on t.name=v.theatre_name
+join screens sc on sc.theatre_id=t.id and sc.name='Screen 1'
+where not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=sc.id);
+
+-- Also keep each movie's original single show (from the first seeding pass) if present.
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,s.id,current_date+1,'15:30','18:20',220 from movies m cross join screens s join theatres t on t.id=s.theatre_id
+where m.title='The Paradise' and t.name='BMS Cinemas' and not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=s.id);
+
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,s.id,current_date+1,'18:30','21:10',220 from movies m cross join screens s join theatres t on t.id=s.theatre_id
+where m.title='Irumudi' and t.name='BMS Cinemas' and not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=s.id);
+
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,s.id,current_date+1,'21:30','23:44',200 from movies m cross join screens s join theatres t on t.id=s.theatre_id
+where m.title='Mandaadi' and t.name='BMS Cinemas' and not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=s.id);
+
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,s.id,current_date+2,'12:00','14:08',180 from movies m cross join screens s join theatres t on t.id=s.theatre_id
+where m.title='Madhuvidhu' and t.name='BMS Cinemas' and not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=s.id);
+
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,s.id,current_date+2,'19:00','21:11',190 from movies m cross join screens s join theatres t on t.id=s.theatre_id
+where m.title='Sathi Leelavathi' and t.name='BMS Cinemas' and not exists(select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=s.id);
+
+insert into show_seats(show_id,seat_number,seat_type) select sh.id,chr(65+floor((g-1)/10)::int)||((g-1)%10+1)::text,case when g<=20 then 'PREMIUM' else 'REGULAR' end from shows sh cross join generate_series(1,60) g where not exists(select 1 from show_seats ss where ss.show_id=sh.id);
+
+-- ============================================================
+-- Real Hyderabad theatre network (30: 15 single screens + 15
+-- multiplexes), replacing the earlier approximated list. Kept
+-- idempotent by name only (not name+address) so re-running this never
+-- creates a second row for a theatre that already exists under a
+-- slightly different address string; existing bookings on the
+-- previous placeholder theatres are preserved (never deleted), just
+-- hidden from new browsing via the active flag.
+-- ============================================================
+
+-- Correct + reactivate the rows that are actually these same real theatres,
+-- BEFORE the insert below, so its name-only NOT EXISTS check correctly
+-- treats them as already present instead of creating a duplicate.
+update theatres set active=true where name in ('Sudarshan 35MM','AMB Cinemas','Prasads Multiplex');
+update theatres set address='RTC X Roads, Hyderabad', latitude=17.3908, longitude=78.4972, active=true where name='Sandhya 70MM';
+
+insert into theatres(name,address,city_id,latitude,longitude)
+select v.name,v.address,c.id,v.lat,v.lon from cities c cross join (values
+  ('Sandhya 70MM','RTC X Roads, Hyderabad',17.3908,78.4972),
+  ('Devi 70MM','RTC X Roads, Hyderabad',17.3919,78.498),
+  ('Sudarshan 35MM','RTC X Roads, Hyderabad',17.3925,78.4972),
+  ('Mythri Vimal 70MM','Balanagar, Hyderabad',17.4644,78.4462),
+  ('Sri Bhramaramba Cinema Hall','Kukatpally, Hyderabad',17.487,78.4065),
+  ('Mallikarjuna Theatre','Kukatpally, Hyderabad',17.4848,78.4082),
+  ('Sree Ramulu Theatre','Moosapet, Hyderabad',17.4762,78.4258),
+  ('Sri Sai Ram 70MM','Malkajgiri, Hyderabad',17.456,78.529),
+  ('SVC Eeshwar Theatre','Attapur, Hyderabad',17.3641,78.4189),
+  ('Sree Ramana Theatre','Amberpet, Hyderabad',17.3925,78.5138),
+  ('Ganga Theatre (Mythri Shiva Ganga)','Dilsukhnagar, Hyderabad',17.3685,78.5245),
+  ('Konark Theatre (Asian Mukta)','Dilsukhnagar, Hyderabad',17.369,78.526),
+  ('Viswanath 70MM','Kukatpally, Hyderabad',17.4862,78.411),
+  ('Sensation Sunshine','Khairatabad, Hyderabad',17.411,78.463),
+  ('Shanti Theatre','Narayanguda, Hyderabad',17.4021,78.4814),
+  ('AMB Cinemas','Gachibowli, Hyderabad',17.4479,78.3489),
+  ('Prasads Multiplex','Khairtabad, Hyderabad',17.4128,78.4659),
+  ('AAA Cinemas','Ameerpet, Hyderabad',17.4374,78.4487),
+  ('Allu Cinemas','Kokapet, Hyderabad',17.4083,78.3339),
+  ('PVR Superplex (Inorbit Mall)','Madhapur, Hyderabad',17.4344,78.3915),
+  ('PVR Nexus Mall','Kukatpally, Hyderabad',17.493,78.402),
+  ('PVR LakeShore Mall','Kukatpally, Hyderabad',17.49,78.4005),
+  ('INOX GVK One Mall','Banjara Hills, Hyderabad',17.4239,78.4483),
+  ('Cinepolis Lulu Mall','Kukatpally, Hyderabad',17.4955,78.396),
+  ('ART Cinemas Tattva Mall','Vanasthalipuram, Hyderabad',17.3312,78.5497),
+  ('Aparna Cinemas','Nallagandla, Hyderabad',17.463,78.322),
+  ('PVR ICON Next Galleria Mall','HITEC City, Hyderabad',17.4483,78.3908),
+  ('PVR Cinemas Irrum Manzil','Irrum Manzil, Hyderabad',17.418,78.461),
+  ('INOX Ashoka One Mall','Kukatpally, Hyderabad',17.4925,78.404),
+  ('Asian CineSquare Multiplex','Uppal, Hyderabad',17.4058,78.5591)
+) as v(name,address,lat,lon)
+where c.name='Hyderabad' and not exists(select 1 from theatres t where t.name=v.name);
+
+-- Retire theatres that were placeholders/approximations, now superseded by the real list above.
+-- Not deleted (existing bookings still reference their shows) - just hidden from new browsing.
+update theatres set active=false where name in (
+  'Arjun 70MM',
+  'Viswanath Theatre 70mm A/C',
+  'Mallikarjuna 70mm A/C DTS',
+  'Sri Sai 35MM',
+  'PVR: Manjeera Trinity Mall',
+  'INOX: The Forum Sujana Mall',
+  'Miraj Cinemas: Cinetown',
+  'Miraj Cinemas: A2A Central Mall',
+  'Cinepolis: DSL Virtue Mall',
+  'BMS Cinemas'
+);
+
+insert into screens(name,total_seats,theatre_id)
+select 'Screen 1',60,t.id from theatres t where t.active=true and not exists(select 1 from screens sc where sc.theatre_id=t.id);
+
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,sc.id,current_date+d.day_offset,v.start_time::time,v.end_time::time,v.price
+from movies m join (values
+  ('The Paradise','Sandhya 70MM','09:30','12:24',170),
+  ('The Paradise','Sandhya 70MM','12:30','15:24',170),
+  ('The Paradise','Sandhya 70MM','15:30','18:24',170),
+  ('The Paradise','Sandhya 70MM','18:30','21:24',170),
+  ('The Paradise','Sandhya 70MM','21:30','00:24',170),
+  ('The Paradise','Devi 70MM','09:30','12:24',170),
+  ('The Paradise','Devi 70MM','12:30','15:24',170),
+  ('The Paradise','Devi 70MM','15:30','18:24',170),
+  ('The Paradise','Devi 70MM','18:30','21:24',170),
+  ('The Paradise','Devi 70MM','21:30','00:24',170),
+  ('The Paradise','Sudarshan 35MM','09:30','12:24',170),
+  ('The Paradise','Sudarshan 35MM','12:30','15:24',170),
+  ('The Paradise','Sudarshan 35MM','15:30','18:24',170),
+  ('The Paradise','Sudarshan 35MM','18:30','21:24',170),
+  ('The Paradise','Sudarshan 35MM','21:30','00:24',170),
+  ('The Paradise','Mythri Vimal 70MM','09:30','12:24',170),
+  ('The Paradise','Mythri Vimal 70MM','12:30','15:24',170),
+  ('The Paradise','Mythri Vimal 70MM','15:30','18:24',170),
+  ('The Paradise','Mythri Vimal 70MM','18:30','21:24',170),
+  ('The Paradise','Mythri Vimal 70MM','21:30','00:24',170),
+  ('The Paradise','Sri Bhramaramba Cinema Hall','09:30','12:24',170),
+  ('The Paradise','Sri Bhramaramba Cinema Hall','12:30','15:24',170),
+  ('The Paradise','Sri Bhramaramba Cinema Hall','15:30','18:24',170),
+  ('The Paradise','Sri Bhramaramba Cinema Hall','18:30','21:24',170),
+  ('The Paradise','Sri Bhramaramba Cinema Hall','21:30','00:24',170),
+  ('The Paradise','Mallikarjuna Theatre','09:30','12:24',170),
+  ('The Paradise','Mallikarjuna Theatre','12:30','15:24',170),
+  ('The Paradise','Mallikarjuna Theatre','15:30','18:24',170),
+  ('The Paradise','Mallikarjuna Theatre','18:30','21:24',170),
+  ('The Paradise','Mallikarjuna Theatre','21:30','00:24',170),
+  ('The Paradise','Sree Ramulu Theatre','09:30','12:24',170),
+  ('The Paradise','Sree Ramulu Theatre','12:30','15:24',170),
+  ('The Paradise','Sree Ramulu Theatre','15:30','18:24',170),
+  ('The Paradise','Sree Ramulu Theatre','18:30','21:24',170),
+  ('The Paradise','Sree Ramulu Theatre','21:30','00:24',170),
+  ('The Paradise','Sri Sai Ram 70MM','09:30','12:24',170),
+  ('The Paradise','Sri Sai Ram 70MM','12:30','15:24',170),
+  ('The Paradise','Sri Sai Ram 70MM','15:30','18:24',170),
+  ('The Paradise','Sri Sai Ram 70MM','18:30','21:24',170),
+  ('The Paradise','Sri Sai Ram 70MM','21:30','00:24',170),
+  ('The Paradise','SVC Eeshwar Theatre','09:30','12:24',170),
+  ('The Paradise','SVC Eeshwar Theatre','12:30','15:24',170),
+  ('The Paradise','SVC Eeshwar Theatre','15:30','18:24',170),
+  ('The Paradise','SVC Eeshwar Theatre','18:30','21:24',170),
+  ('The Paradise','SVC Eeshwar Theatre','21:30','00:24',170),
+  ('The Paradise','AMB Cinemas','08:30','11:24',240),
+  ('The Paradise','AMB Cinemas','10:00','12:54',240),
+  ('The Paradise','AMB Cinemas','11:30','14:24',240),
+  ('The Paradise','AMB Cinemas','13:00','15:54',240),
+  ('The Paradise','AMB Cinemas','14:30','17:24',240),
+  ('The Paradise','AMB Cinemas','16:00','18:54',240),
+  ('The Paradise','AMB Cinemas','17:30','20:24',240),
+  ('The Paradise','AMB Cinemas','19:00','21:54',240),
+  ('The Paradise','AMB Cinemas','20:30','23:24',240),
+  ('The Paradise','AMB Cinemas','22:00','00:54',240),
+  ('The Paradise','Prasads Multiplex','08:30','11:24',240),
+  ('The Paradise','Prasads Multiplex','10:00','12:54',240),
+  ('The Paradise','Prasads Multiplex','11:30','14:24',240),
+  ('The Paradise','Prasads Multiplex','13:00','15:54',240),
+  ('The Paradise','Prasads Multiplex','14:30','17:24',240),
+  ('The Paradise','Prasads Multiplex','16:00','18:54',240),
+  ('The Paradise','Prasads Multiplex','17:30','20:24',240),
+  ('The Paradise','Prasads Multiplex','19:00','21:54',240),
+  ('The Paradise','Prasads Multiplex','20:30','23:24',240),
+  ('The Paradise','Prasads Multiplex','22:00','00:54',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','08:30','11:24',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','10:00','12:54',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','11:30','14:24',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','13:00','15:54',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','14:30','17:24',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','16:00','18:54',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','17:30','20:24',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','19:00','21:54',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','20:30','23:24',240),
+  ('The Paradise','PVR Superplex (Inorbit Mall)','22:00','00:54',240),
+  ('The Paradise','INOX GVK One Mall','08:30','11:24',240),
+  ('The Paradise','INOX GVK One Mall','10:00','12:54',240),
+  ('The Paradise','INOX GVK One Mall','11:30','14:24',240),
+  ('The Paradise','INOX GVK One Mall','13:00','15:54',240),
+  ('The Paradise','INOX GVK One Mall','14:30','17:24',240),
+  ('The Paradise','INOX GVK One Mall','16:00','18:54',240),
+  ('The Paradise','INOX GVK One Mall','17:30','20:24',240),
+  ('The Paradise','INOX GVK One Mall','19:00','21:54',240),
+  ('The Paradise','INOX GVK One Mall','20:30','23:24',240),
+  ('The Paradise','INOX GVK One Mall','22:00','00:54',240),
+  ('Irumudi','Sree Ramulu Theatre','09:30','12:10',180),
+  ('Irumudi','Sree Ramulu Theatre','12:30','15:10',180),
+  ('Irumudi','Sree Ramulu Theatre','15:30','18:10',180),
+  ('Irumudi','Sree Ramulu Theatre','18:30','21:10',180),
+  ('Irumudi','Sree Ramulu Theatre','21:30','00:10',180),
+  ('Irumudi','Sri Sai Ram 70MM','09:30','12:10',180),
+  ('Irumudi','Sri Sai Ram 70MM','12:30','15:10',180),
+  ('Irumudi','Sri Sai Ram 70MM','15:30','18:10',180),
+  ('Irumudi','Sri Sai Ram 70MM','18:30','21:10',180),
+  ('Irumudi','Sri Sai Ram 70MM','21:30','00:10',180),
+  ('Irumudi','SVC Eeshwar Theatre','09:30','12:10',180),
+  ('Irumudi','SVC Eeshwar Theatre','12:30','15:10',180),
+  ('Irumudi','SVC Eeshwar Theatre','15:30','18:10',180),
+  ('Irumudi','SVC Eeshwar Theatre','18:30','21:10',180),
+  ('Irumudi','SVC Eeshwar Theatre','21:30','00:10',180),
+  ('Irumudi','Sree Ramana Theatre','09:30','12:10',180),
+  ('Irumudi','Sree Ramana Theatre','12:30','15:10',180),
+  ('Irumudi','Sree Ramana Theatre','15:30','18:10',180),
+  ('Irumudi','Sree Ramana Theatre','18:30','21:10',180),
+  ('Irumudi','Sree Ramana Theatre','21:30','00:10',180),
+  ('Irumudi','Ganga Theatre (Mythri Shiva Ganga)','09:30','12:10',180),
+  ('Irumudi','Ganga Theatre (Mythri Shiva Ganga)','12:30','15:10',180),
+  ('Irumudi','Ganga Theatre (Mythri Shiva Ganga)','15:30','18:10',180),
+  ('Irumudi','Ganga Theatre (Mythri Shiva Ganga)','18:30','21:10',180),
+  ('Irumudi','Ganga Theatre (Mythri Shiva Ganga)','21:30','00:10',180),
+  ('Irumudi','Konark Theatre (Asian Mukta)','09:30','12:10',180),
+  ('Irumudi','Konark Theatre (Asian Mukta)','12:30','15:10',180),
+  ('Irumudi','Konark Theatre (Asian Mukta)','15:30','18:10',180),
+  ('Irumudi','Konark Theatre (Asian Mukta)','18:30','21:10',180),
+  ('Irumudi','Konark Theatre (Asian Mukta)','21:30','00:10',180),
+  ('Irumudi','Viswanath 70MM','09:30','12:10',180),
+  ('Irumudi','Viswanath 70MM','12:30','15:10',180),
+  ('Irumudi','Viswanath 70MM','15:30','18:10',180),
+  ('Irumudi','Viswanath 70MM','18:30','21:10',180),
+  ('Irumudi','Viswanath 70MM','21:30','00:10',180),
+  ('Irumudi','Sensation Sunshine','09:30','12:10',180),
+  ('Irumudi','Sensation Sunshine','12:30','15:10',180),
+  ('Irumudi','Sensation Sunshine','15:30','18:10',180),
+  ('Irumudi','Sensation Sunshine','18:30','21:10',180),
+  ('Irumudi','Sensation Sunshine','21:30','00:10',180),
+  ('Irumudi','Shanti Theatre','09:30','12:10',180),
+  ('Irumudi','Shanti Theatre','12:30','15:10',180),
+  ('Irumudi','Shanti Theatre','15:30','18:10',180),
+  ('Irumudi','Shanti Theatre','18:30','21:10',180),
+  ('Irumudi','Shanti Theatre','21:30','00:10',180),
+  ('Irumudi','PVR Nexus Mall','08:30','11:10',250),
+  ('Irumudi','PVR Nexus Mall','10:00','12:40',250),
+  ('Irumudi','PVR Nexus Mall','11:30','14:10',250),
+  ('Irumudi','PVR Nexus Mall','13:00','15:40',250),
+  ('Irumudi','PVR Nexus Mall','14:30','17:10',250),
+  ('Irumudi','PVR Nexus Mall','16:00','18:40',250),
+  ('Irumudi','PVR Nexus Mall','17:30','20:10',250),
+  ('Irumudi','PVR Nexus Mall','19:00','21:40',250),
+  ('Irumudi','PVR Nexus Mall','20:30','23:10',250),
+  ('Irumudi','PVR Nexus Mall','22:00','00:40',250),
+  ('Irumudi','Cinepolis Lulu Mall','08:30','11:10',250),
+  ('Irumudi','Cinepolis Lulu Mall','10:00','12:40',250),
+  ('Irumudi','Cinepolis Lulu Mall','11:30','14:10',250),
+  ('Irumudi','Cinepolis Lulu Mall','13:00','15:40',250),
+  ('Irumudi','Cinepolis Lulu Mall','14:30','17:10',250),
+  ('Irumudi','Cinepolis Lulu Mall','16:00','18:40',250),
+  ('Irumudi','Cinepolis Lulu Mall','17:30','20:10',250),
+  ('Irumudi','Cinepolis Lulu Mall','19:00','21:40',250),
+  ('Irumudi','Cinepolis Lulu Mall','20:30','23:10',250),
+  ('Irumudi','Cinepolis Lulu Mall','22:00','00:40',250),
+  ('Irumudi','Allu Cinemas','08:30','11:10',250),
+  ('Irumudi','Allu Cinemas','10:00','12:40',250),
+  ('Irumudi','Allu Cinemas','11:30','14:10',250),
+  ('Irumudi','Allu Cinemas','13:00','15:40',250),
+  ('Irumudi','Allu Cinemas','14:30','17:10',250),
+  ('Irumudi','Allu Cinemas','16:00','18:40',250),
+  ('Irumudi','Allu Cinemas','17:30','20:10',250),
+  ('Irumudi','Allu Cinemas','19:00','21:40',250),
+  ('Irumudi','Allu Cinemas','20:30','23:10',250),
+  ('Irumudi','Allu Cinemas','22:00','00:40',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','08:30','11:10',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','10:00','12:40',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','11:30','14:10',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','13:00','15:40',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','14:30','17:10',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','16:00','18:40',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','17:30','20:10',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','19:00','21:40',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','20:30','23:10',250),
+  ('Irumudi','PVR ICON Next Galleria Mall','22:00','00:40',250),
+  ('Madhuvidhu','Allu Cinemas','13:30','16:00',240),
+  ('Madhuvidhu','PVR Superplex (Inorbit Mall)','15:30','18:00',260),
+  ('Madhuvidhu','PVR Nexus Mall','17:15','19:45',240),
+  ('Madhuvidhu','PVR LakeShore Mall','19:00','21:30',250),
+  ('Madhuvidhu','INOX GVK One Mall','21:15','23:45',200),
+  ('Madhuvidhu','Cinepolis Lulu Mall','13:30','16:00',260),
+  ('Madhuvidhu','ART Cinemas Tattva Mall','15:15','17:45',200),
+  ('Madhuvidhu','Aparna Cinemas','17:00','19:30',260),
+  ('Madhuvidhu','PVR ICON Next Galleria Mall','19:30','22:00',230),
+  ('Sathi Leelavathi','ART Cinemas Tattva Mall','13:30','16:00',230),
+  ('Sathi Leelavathi','Aparna Cinemas','15:30','18:00',210),
+  ('Sathi Leelavathi','PVR ICON Next Galleria Mall','17:15','19:45',220),
+  ('Sathi Leelavathi','PVR Cinemas Irrum Manzil','19:30','22:00',250),
+  ('Sathi Leelavathi','INOX Ashoka One Mall','21:00','23:30',250),
+  ('Sathi Leelavathi','Asian CineSquare Multiplex','13:15','15:45',240),
+  ('Sathi Leelavathi','Sandhya 70MM','15:15','17:45',170),
+  ('Sathi Leelavathi','Devi 70MM','17:45','20:15',140),
+  ('Sathi Leelavathi','Sudarshan 35MM','19:30','22:00',160)
+) as v(movie_title,theatre_name,start_time,end_time,price) on v.movie_title=m.title
+join theatres t on t.name=v.theatre_name and t.active=true
+join screens sc on sc.theatre_id=t.id and sc.name='Screen 1'
+cross join generate_series(0,6) as d(day_offset)
+where not exists(
+  select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=sc.id
+    and sh.show_date=current_date+d.day_offset and sh.start_time=v.start_time::time
+);
+
+insert into show_seats(show_id,seat_number,seat_type) select sh.id,chr(65+floor((g-1)/10)::int)||((g-1)%10+1)::text,case when g<=20 then 'PREMIUM' else 'REGULAR' end from shows sh cross join generate_series(1,60) g where not exists(select 1 from show_seats ss where ss.show_id=sh.id);
+
+
+
+-- ============================================================
+-- Sigma (Now Showing) + Dragon, Ranabaali (Coming Soon)
+-- Idempotent: safe to re-run on every boot.
+-- ============================================================
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Sigma','Action-adventure heist film starring Sundeep Kishan with Faria Abdullah, written and directed by Jason Sanjay (Lyca Productions), music by Thaman S. Released 2 October 2026.','/posters/sigma.jpg','Telugu','Action',150,'UA',0,false
+where not exists(select 1 from movies where title='Sigma');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Dragon','Upcoming action film starring Man of Masses NTR, directed by Prashanth Neel (Mythri Movie Makers, NTR Arts, T-Series). Releasing 11 June 2027.','/posters/dragon.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Dragon');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Ranabaali','Upcoming film starring Vijay Deverakonda, directed by Rahul Sankrityan (T-Series Films). Releasing 16 October 2026.','/posters/ranabaali.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Ranabaali');
+
+-- Showtimes for Sigma only (the two coming-soon movies get no shows), next 7 days.
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,sc.id,current_date+d.day_offset,v.start_time::time,v.end_time::time,v.price
+from movies m join (values
+  ('Sigma','AMB Cinemas','13:00','15:30',250),
+  ('Sigma','AMB Cinemas','16:30','19:00',250),
+  ('Sigma','AMB Cinemas','20:00','22:30',250),
+  ('Sigma','PVR Nexus Mall','14:00','16:30',250),
+  ('Sigma','PVR Nexus Mall','17:30','20:00',250),
+  ('Sigma','PVR Nexus Mall','21:00','23:30',250),
+  ('Sigma','Cinepolis Lulu Mall','13:30','16:00',250),
+  ('Sigma','Cinepolis Lulu Mall','18:00','20:30',250),
+  ('Sigma','Allu Cinemas','15:00','17:30',250),
+  ('Sigma','Allu Cinemas','19:30','22:00',250),
+  ('Sigma','PVR ICON Next Galleria Mall','14:30','17:00',250),
+  ('Sigma','PVR ICON Next Galleria Mall','20:30','23:00',250),
+  ('Sigma','Sandhya 70MM','12:30','15:00',170),
+  ('Sigma','Sandhya 70MM','18:30','21:00',170),
+  ('Sigma','Devi 70MM','15:30','18:00',170),
+  ('Sigma','Devi 70MM','21:30','00:00',170),
+  ('Sigma','Sudarshan 35MM','13:00','15:30',150),
+  ('Sigma','Sudarshan 35MM','19:00','21:30',150)
+) as v(movie_title,theatre_name,start_time,end_time,price) on v.movie_title=m.title
+join theatres t on t.name=v.theatre_name and t.active=true
+join screens sc on sc.theatre_id=t.id and sc.name='Screen 1'
+cross join generate_series(0,6) as d(day_offset)
+where not exists(
+  select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=sc.id
+    and sh.show_date=current_date+d.day_offset and sh.start_time=v.start_time::time
+);
+
+-- Seats for the new shows (only creates seats for shows that have none yet)
+insert into show_seats(show_id,seat_number,seat_type) select sh.id,chr(65+floor((g-1)/10)::int)||((g-1)%10+1)::text,case when g<=20 then 'PREMIUM' else 'REGULAR' end from shows sh cross join generate_series(1,60) g where not exists(select 1 from show_seats ss where ss.show_id=sh.id);
+
+
+--new movies
+
+-- ============================================================
+-- Tella Kagitam (Now Showing) + SYG, Kaaka, Vrushakarma, Bhari (Coming Soon)
+-- ============================================================
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Tella Kagitam','Telugu film, now showing in theatres.','/posters/tella_kagitam.jpg','Telugu','Drama',140,'UA',0,false
+where not exists(select 1 from movies where title='Tella Kagitam');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'SYG','Upcoming Telugu film. Release date not yet announced.','/posters/syg.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='SYG');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Kaaka','Upcoming Telugu film. Release date not yet announced.','/posters/kaaka.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Kaaka');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Vrushakarma','Upcoming Telugu film. Release date not yet announced.','/posters/vrushakarma.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Vrushakarma');
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,upcoming)
+select 'Bhari','Upcoming Telugu film. Release date not yet announced.','/posters/bhari.jpg','Telugu','Action',0,'UA',0,true
+where not exists(select 1 from movies where title='Bhari');
+
+-- Shows for Tella Kagitam only, next 7 days, in 6 theatres that have no other live movie
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select m.id,sc.id,current_date+d.day_offset,v.start_time::time,v.end_time::time,v.price
+from movies m join (values
+  ('Tella Kagitam','ART Cinemas Tattva Mall','13:30','15:50',220),
+  ('Tella Kagitam','ART Cinemas Tattva Mall','17:00','19:20',220),
+  ('Tella Kagitam','ART Cinemas Tattva Mall','20:30','22:50',220),
+  ('Tella Kagitam','Aparna Cinemas','14:00','16:20',220),
+  ('Tella Kagitam','Aparna Cinemas','17:15','19:35',220),
+  ('Tella Kagitam','Aparna Cinemas','20:30','22:50',220),
+  ('Tella Kagitam','PVR LakeShore Mall','13:00','15:20',240),
+  ('Tella Kagitam','PVR LakeShore Mall','16:15','18:35',240),
+  ('Tella Kagitam','PVR LakeShore Mall','19:30','21:50',240),
+  ('Tella Kagitam','PVR Cinemas Irrum Manzil','14:30','16:50',240),
+  ('Tella Kagitam','PVR Cinemas Irrum Manzil','18:00','20:20',240),
+  ('Tella Kagitam','PVR Cinemas Irrum Manzil','21:15','23:35',240),
+  ('Tella Kagitam','INOX Ashoka One Mall','13:45','16:05',240),
+  ('Tella Kagitam','INOX Ashoka One Mall','17:00','19:20',240),
+  ('Tella Kagitam','INOX Ashoka One Mall','20:15','22:35',240),
+  ('Tella Kagitam','Asian CineSquare Multiplex','14:15','16:35',230),
+  ('Tella Kagitam','Asian CineSquare Multiplex','17:30','19:50',230),
+  ('Tella Kagitam','Asian CineSquare Multiplex','20:45','23:05',230)
+) as v(movie_title,theatre_name,start_time,end_time,price) on v.movie_title=m.title
+join theatres t on t.name=v.theatre_name and t.active=true
+join screens sc on sc.theatre_id=t.id and sc.name='Screen 1'
+cross join generate_series(0,6) as d(day_offset)
+where not exists(
+  select 1 from shows sh where sh.movie_id=m.id and sh.screen_id=sc.id
+    and sh.show_date=current_date+d.day_offset and sh.start_time=v.start_time::time
+);
+
+insert into show_seats(show_id,seat_number,seat_type) select sh.id,chr(65+floor((g-1)/10)::int)||((g-1)%10+1)::text,case when g<=20 then 'PREMIUM' else 'REGULAR' end from shows sh cross join generate_series(1,60) g where not exists(select 1 from show_seats ss where ss.show_id=sh.id);
+
+
+-- Demo ratings for Sigma and Tella Kagitam (they were seeded at 0). Only rows still at 0 are updated,
+-- so a rating changed later by hand is never overwritten on restart.
+update movies set rating=7.4 where title='Sigma' and rating=0;
+update movies set rating=7.9 where title='Tella Kagitam' and rating=0;
+
+-- Seat layout is 10 rows (A-J) x 10 seats. Shows that still have the original 60 seats (A1-F10)
+-- get the missing 40 (G1-J10) added. Existing seats and bookings are never touched, and a show
+-- is only topped up once (it stops matching after reaching 100 seats).
+insert into show_seats(show_id,seat_number,seat_type)
+select sh.id,chr(65+floor((g-1)/10)::int)||((g-1)%10+1)::text,'REGULAR'
+from shows sh cross join generate_series(61,100) g
+where (select count(*) from show_seats ss where ss.show_id=sh.id)=60
+on conflict (show_id,seat_number) do nothing;
+
+-- ============================================================
+-- Ticket pricing: base price (Dress Class rows) is Rs 100 at single screens and Rs 150 at
+-- multiplexes. Recliner (row A) = 300%, Balcony (B-D) = 150%, Second Class (E-G) = 125%,
+-- Dress Class (H-J) = 100% of that base. Class prices are computed in Pricing.java; shows.price
+-- holds the base ("starting from") price. Existing bookings keep the amount they were paid.
+-- ============================================================
+update theatres set theatre_type='MULTIPLEX' where name in (
+  'AMB Cinemas','Prasads Multiplex','AAA Cinemas','Allu Cinemas','PVR Superplex (Inorbit Mall)',
+  'PVR Nexus Mall','PVR LakeShore Mall','INOX GVK One Mall','Cinepolis Lulu Mall','ART Cinemas Tattva Mall',
+  'Aparna Cinemas','PVR ICON Next Galleria Mall','PVR Cinemas Irrum Manzil','INOX Ashoka One Mall',
+  'Asian CineSquare Multiplex',
+  'PVR: Manjeera Trinity Mall','INOX: The Forum Sujana Mall','Miraj Cinemas: Cinetown',
+  'Miraj Cinemas: A2A Central Mall','Cinepolis: DSL Virtue Mall'
+) and theatre_type<>'MULTIPLEX';
+
+update shows sh set price = case when t.theatre_type='MULTIPLEX' then 150 else 100 end
+from screens sc join theatres t on t.id=sc.theatre_id
+where sc.id=sh.screen_id and sh.price <> case when t.theatre_type='MULTIPLEX' then 150 else 100 end;
+
+-- Cast & crew shown on the movie page. Taken from each movie's own description above; only filled when still empty.
+update movies set cast_crew='[{"name": "Nani", "role": "Actor"}, {"name": "Raghav Juyal", "role": "Actor"}, {"name": "Srikanth Odela", "role": "Director"}]' where title='The Paradise' and cast_crew is null;
+update movies set cast_crew='[{"name": "Ravi Teja", "role": "Actor"}, {"name": "Priya Bhavani Shankar", "role": "Actor"}, {"name": "Shiva Nirvana", "role": "Director"}]' where title='Irumudi' and cast_crew is null;
+update movies set cast_crew='[{"name": "Sundeep Kishan", "role": "Actor"}, {"name": "Faria Abdullah", "role": "Actor"}, {"name": "Jason Sanjay", "role": "Writer & Director"}, {"name": "Thaman S", "role": "Music"}, {"name": "Lyca Productions", "role": "Producer"}]' where title='Sigma' and cast_crew is null;
+update movies set cast_crew='[{"name": "Vijay Deverakonda", "role": "Actor"}, {"name": "Rahul Sankrityan", "role": "Director"}, {"name": "T-Series Films", "role": "Producer"}]' where title='Ranabaali' and cast_crew is null;
+update movies set cast_crew='[{"name": "Prabhas", "role": "Actor"}, {"name": "Triptii Dimri", "role": "Actor"}, {"name": "Prakash Raj", "role": "Actor"}, {"name": "Sandeep Reddy Vanga", "role": "Director"}, {"name": "T-Series", "role": "Producer"}]' where title='Spirit' and cast_crew is null;
+update movies set cast_crew='[{"name": "NTR", "role": "Actor"}, {"name": "Prashanth Neel", "role": "Director"}, {"name": "Mythri Movie Makers", "role": "Producer"}]' where title='Dragon' and cast_crew is null;
+update movies set cast_crew='[{"name": "Mahesh Babu", "role": "Actor"}, {"name": "S. S. Rajamouli", "role": "Director"}, {"name": "Sri Durga Arts", "role": "Producer"}]' where title='Varanasi' and cast_crew is null;
+update movies set cast_crew='[{"name": "Ram Charan", "role": "Actor"}, {"name": "Sukumar", "role": "Director"}, {"name": "Devi Sri Prasad", "role": "Music"}, {"name": "Mythri Movie Makers", "role": "Producer"}]' where title='RC17' and cast_crew is null;
+update movies set cast_crew='[{"name": "Allu Arjun", "role": "Actor"}, {"name": "Atlee", "role": "Director"}, {"name": "Sun Pictures", "role": "Presenter"}]' where title='Raaka' and cast_crew is null;
+update movies set cast_crew='[{"name": "Pawan Kalyan", "role": "Actor"}, {"name": "Sujeeth", "role": "Writer & Director"}]' where title='OG 2' and cast_crew is null;
+
+-- ============================================================
+-- Per-show language and format (2D / 3D), and a full 10 x 15 = 150 seat layout.
+-- Everything below only fills what is missing, so re-running it changes nothing that exists.
+-- ============================================================
+update shows sh set language = m.language from movies m where m.id = sh.movie_id and sh.language is null;
+
+-- Demo assignment: multiplex shows starting at 18:00 or later are 3D, everything else 2D.
+-- Only shows with no format yet are touched, so a format set by an admin is never overwritten.
+update shows sh set format = case when t.theatre_type = 'MULTIPLEX' and sh.start_time >= time '18:00' then '3D' else '2D' end
+from screens sc join theatres t on t.id = sc.theatre_id
+where sc.id = sh.screen_id and sh.format is null;
+alter table shows alter column format set default '2D';
+
+-- Every show gets rows A-J with 15 seats each (A1-J15). Existing seats and bookings are not touched.
+insert into show_seats(show_id,seat_number,seat_type)
+select sh.id, chr(65 + r) || n::text, case when r < 4 then 'PREMIUM' else 'REGULAR' end
+from shows sh cross join generate_series(0,9) r cross join generate_series(1,15) n
+where (select count(*) from show_seats ss where ss.show_id = sh.id) < 150
+on conflict (show_id,seat_number) do nothing;
+
+-- ============================================================
+-- Offers: percentage off the ticket price (convenience fee and GST are not discounted).
+-- Seeded once; an edited or deactivated coupon is never overwritten.
+-- ============================================================
+insert into coupons(code,description,percent,max_discount,min_amount,first_booking_only) values
+  ('BMS10','10% off up to Rs 100 on orders of Rs 200 or more',10,100,200,false),
+  ('MOVIE20','20% off up to Rs 150 on orders of Rs 500 or more',20,150,500,false),
+  ('FIRST15','15% off up to Rs 120 on your first booking (min Rs 150)',15,120,150,true)
+on conflict (code) do nothing;
+
+-- Release dates are written into the descriptions ("Released 2 October 2026" / "Releasing 11 June 2027").
+update movies set release_date = to_date((regexp_match(description,'Releas(?:ed|ing) (\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4})'))[1],'FMDD FMMonth YYYY')
+where release_date is null and description ~ 'Releas(ed|ing) \d{1,2} (January|February|March|April|May|June|July|August|September|October|November|December) \d{4}';
+
+-- Cancellation policy per cinema (like BMS: some cinemas are non-cancellable).
+update theatres set cancellable=false where name in ('AMB Cinemas','Prasads Multiplex');
+
+-- ============================================================
+-- ============================================================
+-- Cities beyond Hyderabad: Vijayawada, Visakhapatnam, Darsi, Ongole, Chennai, Bengaluru, Mumbai,
+-- Kolkata and Delhi-NCR. Real cinema names (mall multiplexes = 3 screens, single screens = 1).
+-- Addresses / coordinates are approximate. Same booking flow as everywhere else.
+-- ============================================================
+insert into cities(name) values ('Vijayawada'),('Visakhapatnam'),('Darsi'),('Ongole'),
+  ('Chennai'),('Bengaluru'),('Mumbai'),('Kolkata'),('Delhi-NCR') on conflict(name) do nothing;
+
+-- Earlier sample listings (not real cinemas) are switched off.
+update theatres set active=false where name in
+  ('PVR: Trendset Mall','INOX: Vijayawada Mall','Swarna Palace 70MM','Sri Durga 70MM',
+   'PVR: Vizag Central Mall','Jagadamba 70MM',
+   'Sri Venkateswara Multiplex','Lakshmi 35MM','Sri Rama 70MM',
+   'Sri Vasavi Mall Multiplex','Surya 70MM','Sri Lakshmi 35MM');
+
+insert into theatres(name,address,city_id,latitude,longitude,theatre_type)
+select v.name,v.address,c.id,v.lat,v.lon,v.typ
+from (values
+  ('Vijayawada','INOX: Laila Mall','Laila Mall, Benz Circle, Vijayawada',16.4998,80.6552,'MULTIPLEX'),
+  ('Vijayawada','PVR: Ripples Mall','Ripples Mall, Vijayawada',16.5262,80.6720,'MULTIPLEX'),
+  ('Vijayawada','INOX: LEPL Icon','LEPL Icon Mall, Vijayawada',16.5230,80.6350,'MULTIPLEX'),
+  ('Vijayawada','Sowmya Theatre','Vijayawada',16.5120,80.6330,'SINGLE'),
+  ('Visakhapatnam','INOX: CMR Central Mall','Maharanipeta, Visakhapatnam',17.7231,83.3035,'MULTIPLEX'),
+  ('Visakhapatnam','Cinepolis: Sreekanya Cineglitz','Waltair Main Road, Visakhapatnam',17.7186,83.3088,'MULTIPLEX'),
+  ('Visakhapatnam','SVC Cinemas: Gokul','Visakhapatnam',17.7120,83.3010,'SINGLE'),
+  ('Visakhapatnam','Melody Theatre','Waltair Main Road, Visakhapatnam',17.7170,83.3050,'SINGLE'),
+  ('Visakhapatnam','Arena Cinemas','Visakhapatnam',17.7300,83.3100,'SINGLE'),
+  ('Darsi','Sri Venkateswara Picture Palace','Darsi, Prakasam',15.7728,79.6783,'SINGLE'),
+  ('Darsi','Siva Shankar Theatre','Darsi, Prakasam',15.7690,79.6750,'SINGLE'),
+  ('Darsi','Srinivasa Picture Palace','Darsi, Prakasam',15.7760,79.6810,'SINGLE'),
+  ('Ongole','Gorantla Cinemas','Ongole',15.5057,80.0499,'SINGLE'),
+  ('Ongole','Krishna Theatre','Ongole',15.5030,80.0450,'SINGLE'),
+  ('Ongole','SV Cinemas','Ongole',15.5090,80.0540,'SINGLE'),
+  ('Chennai','PVR: Sathyam Cinemas','Royapettah, Chennai',13.0540,80.2584,'MULTIPLEX'),
+  ('Chennai','PVR: Grand Galada','Pallavaram, Chennai',12.9689,80.1493,'MULTIPLEX'),
+  ('Chennai','Luxe Cinemas: Phoenix MarketCity','Velachery, Chennai',12.9926,80.2182,'MULTIPLEX'),
+  ('Chennai','Escape Cinemas: Express Avenue','Royapettah, Chennai',13.0587,80.2643,'MULTIPLEX'),
+  ('Chennai','AGS Cinemas: OMR','Navalur, Chennai',12.8460,80.2270,'MULTIPLEX'),
+  ('Chennai','Kasi Theatre','Ashok Nagar, Chennai',13.0377,80.2125,'SINGLE'),
+  ('Chennai','Udhayam Theatre','Ashok Nagar, Chennai',13.0366,80.2101,'SINGLE'),
+  ('Chennai','Rohini Silver Screens','Koyambedu, Chennai',13.0694,80.1948,'SINGLE'),
+  ('Bengaluru','PVR: Forum Mall Koramangala','Koramangala, Bengaluru',12.9346,77.6112,'MULTIPLEX'),
+  ('Bengaluru','INOX: Garuda Mall','Magrath Road, Bengaluru',12.9700,77.6094,'MULTIPLEX'),
+  ('Bengaluru','PVR: Orion Mall','Rajajinagar, Bengaluru',13.0110,77.5550,'MULTIPLEX'),
+  ('Bengaluru','PVR: Phoenix Marketcity','Whitefield, Bengaluru',12.9966,77.6965,'MULTIPLEX'),
+  ('Bengaluru','Kapali Theatre','Gandhinagar, Bengaluru',12.9790,77.5740,'SINGLE'),
+  ('Bengaluru','Triveni Theatre','Malleshwaram, Bengaluru',13.0108,77.5700,'SINGLE'),
+  ('Bengaluru','Navarang Theatre','Rajajinagar, Bengaluru',12.9990,77.5560,'SINGLE'),
+  ('Mumbai','PVR: Icon Phoenix Palladium','Lower Parel, Mumbai',18.9937,72.8258,'MULTIPLEX'),
+  ('Mumbai','INOX: R-City Ghatkopar','Ghatkopar West, Mumbai',19.0997,72.9166,'MULTIPLEX'),
+  ('Mumbai','PVR: Juhu','Juhu, Mumbai',19.1075,72.8263,'MULTIPLEX'),
+  ('Mumbai','Maratha Mandir','Mumbai Central, Mumbai',18.9690,72.8205,'SINGLE'),
+  ('Mumbai','Gaiety Galaxy','Bandra West, Mumbai',19.0590,72.8370,'SINGLE'),
+  ('Kolkata','INOX: South City Mall','Prince Anwar Shah Rd, Kolkata',22.5013,88.3622,'MULTIPLEX'),
+  ('Kolkata','PVR: Mani Square','EM Bypass, Kolkata',22.5767,88.4020,'MULTIPLEX'),
+  ('Kolkata','Priya Cinema','Rashbehari Ave, Kolkata',22.5191,88.3534,'SINGLE'),
+  ('Kolkata','Metro Cinema','Esplanade, Kolkata',22.5622,88.3510,'SINGLE'),
+  ('Kolkata','New Empire','Humayun Place, Kolkata',22.5614,88.3524,'SINGLE'),
+  ('Delhi-NCR','PVR: Select Citywalk','Saket, New Delhi',28.5285,77.2191,'MULTIPLEX'),
+  ('Delhi-NCR','PVR: Priya Vasant Vihar','Vasant Vihar, New Delhi',28.5600,77.1580,'MULTIPLEX'),
+  ('Delhi-NCR','INOX: Nehru Place','Nehru Place, New Delhi',28.5491,77.2514,'MULTIPLEX'),
+  ('Delhi-NCR','PVR: Plaza','Connaught Place, New Delhi',28.6320,77.2178,'MULTIPLEX'),
+  ('Delhi-NCR','Liberty Cinema','Karol Bagh, New Delhi',28.6420,77.2150,'SINGLE'),
+  ('Delhi-NCR','Delite Diamond','Asaf Ali Road, New Delhi',28.6410,77.2400,'SINGLE'),
+  ('Delhi-NCR','Amba Cinema','New Delhi',28.6500,77.2000,'SINGLE')
+) as v(city,name,address,lat,lon,typ)
+join cities c on c.name=v.city
+where not exists(select 1 from theatres t where t.name=v.name);
+
+insert into screens(name,total_seats,theatre_id)
+select 'Screen ' || g, 150, t.id
+from theatres t join cities c on c.id=t.city_id
+cross join generate_series(1,3) g
+where c.name in ('Vijayawada','Visakhapatnam','Darsi','Ongole','Chennai','Bengaluru','Mumbai','Kolkata','Delhi-NCR')
+  and t.active=true
+  and g <= case when t.theatre_type='MULTIPLEX' then 3 else 1 end
+  and not exists(select 1 from screens s where s.theatre_id=t.id and s.name='Screen ' || g);
+
+-- Telugu movies that are running rotate across the new screens in four daily slots.
+-- The daily scheduler then repeats these shows across the rolling 7-day window.
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price)
+select mv.id, sc.screen_id, current_date+1, sl.st, sl.st + interval '2 hours 30 minutes',
+       case when sc.theatre_type='MULTIPLEX' then 150 else 100 end
+from (
+  select s.id screen_id, t.theatre_type, row_number() over (order by s.id) srn
+  from screens s join theatres t on t.id=s.theatre_id join cities c on c.id=t.city_id
+  where t.active=true
+    and c.name in ('Vijayawada','Visakhapatnam','Darsi','Ongole','Chennai','Bengaluru','Mumbai','Kolkata','Delhi-NCR')
+) sc
+cross join (values (1,time '10:30'),(2,time '14:00'),(3,time '18:30'),(4,time '21:15')) as sl(n,st)
+join (
+  select id, row_number() over (order by id) rn, count(*) over () cnt
+  from movies where active=true and upcoming=false and language='Telugu'
+) mv on mv.rn = ((sc.srn + sl.n) % mv.cnt) + 1
+where not exists(select 1 from shows sh where sh.movie_id=mv.id and sh.screen_id=sc.screen_id and sh.start_time=sl.st);
+
+-- Language, 2D/3D format and the 150-seat layout for the new shows (only fills what is missing).
+update shows sh set language = m.language from movies m where m.id = sh.movie_id and sh.language is null;
+update shows sh set format = case when t.theatre_type = 'MULTIPLEX' and sh.start_time >= time '18:00' then '3D' else '2D' end
+from screens sc join theatres t on t.id = sc.theatre_id
+where sc.id = sh.screen_id and sh.format is null;
+insert into show_seats(show_id,seat_number,seat_type)
+select sh.id, chr(65 + r) || n::text, case when r < 4 then 'PREMIUM' else 'REGULAR' end
+from shows sh cross join generate_series(0,9) r cross join generate_series(1,15) n
+where (select count(*) from show_seats ss where ss.show_id = sh.id) < 150
+on conflict (show_id,seat_number) do nothing;
+
+-- Food & beverages offered on the seat page (added to the total, no convenience fee).
+insert into food_items(name,description,price,veg) values
+ ('Salted Popcorn (Regular)','Freshly popped, 85 g',180,true),
+ ('Caramel Popcorn (Large)','Sweet caramel, 130 g',260,true),
+ ('Cheese Nachos','Nachos with cheese dip',220,true),
+ ('Veg Puff','Baked, 1 pc',70,true),
+ ('Chicken Puff','Baked, 1 pc',90,false),
+ ('French Fries','Salted, 100 g',150,true),
+ ('Pepsi (500 ml)','Chilled soft drink',120,true),
+ ('Cold Coffee','Iced, 300 ml',160,true),
+ ('Combo: Popcorn + 2 Pepsi','Regular popcorn and two 500 ml Pepsi',390,true)
+on conflict(name) do nothing;
+
+-- Ranabaali releases on 16 October 2026; the release scheduler moves it to Now Showing automatically.
+update movies set release_date = date '2026-10-16' where title = 'Ranabaali' and release_date is null;
+
+-- ============================================================
+-- Aadarsha Kutumbam (House No: 47 / AK 47) and Cult, both releasing 30 October 2026.
+-- Details from the film trade press (Hans India, Filmibeat). Runtime and Cult's certificate are not announced, so they
+-- are left empty rather than guessed. Posters are placeholders until the real ones are filled in (see MovieEnricher).
+-- Idempotent: safe to re-run on every boot, a movie with the same title is never duplicated or overwritten.
+-- ============================================================
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,release_date,upcoming,cast_crew)
+select 'Aadarsha Kutumbam',
+       'Family entertainer written and directed by Trivikram, starring Venkatesh and Srinidhi Shetty with Nara Rohith, Nivetha Pethuraj and Rao Ramesh. A middle-class family story mixing comedy, action and crime. Produced by Haarika & Hassine Creations, music by Thaman S. Releasing 30 October 2026.',
+       '/posters/placeholder-aadarsha-kutumbam.svg','Telugu','Family, Action, Comedy',null,'UA',0,
+       date '2026-10-30', (date '2026-10-30' > (now() at time zone 'Asia/Kolkata')::date),
+       '[{"name":"Venkatesh Daggubati","role":"Actor","character":"Chitti Babu"},{"name":"Srinidhi Shetty","role":"Actor","character":"Swarna"},{"name":"Nara Rohith","role":"Actor"},{"name":"Nivetha Pethuraj","role":"Actor"},{"name":"Rao Ramesh","role":"Actor"},{"name":"Brahmaji","role":"Actor"},{"name":"Vennela Kishore","role":"Actor"},{"name":"Satya","role":"Actor"},{"name":"Raghu Babu","role":"Actor"},{"name":"Trivikram Srinivas","role":"Director"},{"name":"Trivikram Srinivas","role":"Writer"},{"name":"S Radha Krishna","role":"Producer"},{"name":"Thaman S","role":"Music Director"},{"name":"Haarika & Hassine Creations","role":"Banner"}]'
+where not exists(select 1 from movies where lower(title) in ('aadarsha kutumbam','adarsha kutumbam','aadarsha kutumbam house no 47'));
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,release_date,upcoming,cast_crew)
+select 'Cult',
+       'Slasher thriller starring, written and directed by Vishwak Sen, with Gayatri Bharadwaj and Yagnya Turlapati. Music by Ravi Basrur, produced under the Tarak Cinemas and Vanmaye Creations banners. Releasing 30 October 2026.',
+       '/posters/placeholder-cult.svg','Telugu','Action, Thriller',null,null,0,
+       date '2026-10-30', (date '2026-10-30' > (now() at time zone 'Asia/Kolkata')::date),
+       '[{"name":"Vishwak Sen","role":"Actor"},{"name":"Gayatri Bharadwaj","role":"Actor"},{"name":"Yagnya Turlapati","role":"Actor"},{"name":"Vishwak Sen","role":"Director"},{"name":"Sandeep Kakarala","role":"Producer"},{"name":"Karate Raju","role":"Producer"},{"name":"Ravi Basrur","role":"Music Director"},{"name":"Tarak Cinemas","role":"Banner"},{"name":"Vanmaye Creations","role":"Banner"}]'
+where not exists(select 1 from movies where lower(title) = 'cult');
+
+-- Real posters for Aadarsha Kutumbam and Cult (replace the placeholders), and Ramayana (Part 1) releasing 5 November 2026.
+-- Idempotent: the poster swap only touches rows still on a placeholder; Ramayana is inserted once.
+update movies set poster_url='/posters/aadarsha-kutumbam.jpg' where lower(title)='aadarsha kutumbam' and poster_url like '%placeholder%';
+update movies set poster_url='/posters/cult.jpg' where lower(title)='cult' and poster_url like '%placeholder%';
+
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,release_date,upcoming,cast_crew)
+select 'Ramayana',
+       'Namit Malhotra''s epic retelling of the Ramayana, directed by Nitesh Tiwari, starring Ranbir Kapoor as Rama, Sai Pallavi as Sita, Yash as Ravana, Sunny Deol as Hanuman and Ravie Dubey as Lakshman. Filmed for IMAX, VFX by DNEG. Presented by Prime Focus Studios and Monster Mind Creations, releasing 5 November 2026.',
+       '/posters/ramayana.jpg','Hindi','Epic, Mythology, Drama',null,null,0,
+       date '2026-11-05', (date '2026-11-05' > (now() at time zone 'Asia/Kolkata')::date),
+       '[{"name":"Ranbir Kapoor","role":"Actor","character":"Rama"},{"name":"Sai Pallavi","role":"Actor","character":"Sita"},{"name":"Yash","role":"Actor","character":"Ravana"},{"name":"Sunny Deol","role":"Actor","character":"Hanuman"},{"name":"Ravie Dubey","role":"Actor","character":"Lakshman"},{"name":"Nitesh Tiwari","role":"Director"},{"name":"Namit Malhotra","role":"Producer"},{"name":"Prime Focus Studios","role":"Banner"}]'
+where not exists(select 1 from movies where lower(title) in ('ramayana','ramayanam'));
+
+-- Ramayana is listed in Telugu (it was added as Hindi). Done once, guarded by app_flags, so a later admin edit is never undone.
+with f as (insert into app_flags(flag) values('ramayana_telugu_2026_11_04') on conflict do nothing returning 1)
+update movies set language='Telugu' where lower(title) = 'ramayana' and exists(select 1 from f);
+
+-- Scene (Telugu), starring Suriya, releasing 6 November 2026. Details are what the poster states: writer-director Jithu Madhavan,
+-- music Sushin Shyam, produced by Jyotika and Suriya (2D Entertainment). Runtime, certificate and genre are not announced.
+insert into movies(title,description,poster_url,language,genre,duration_minutes,certificate,rating,release_date,upcoming,cast_crew)
+select 'Scene',
+       'Suriya stars in Scene, written and directed by Jithu Madhavan with music by Sushin Shyam. Produced by Jyotika and Suriya under 2D Entertainment. Releasing 6 November 2026.',
+       '/posters/scene.jpg','Telugu','Action, Drama',null,null,0,
+       date '2026-11-06', (date '2026-11-06' > (now() at time zone 'Asia/Kolkata')::date),
+       '[{"name":"Suriya","role":"Actor"},{"name":"Jithu Madhavan","role":"Director"},{"name":"Jithu Madhavan","role":"Writer"},{"name":"Jyotika","role":"Producer"},{"name":"Suriya","role":"Producer"},{"name":"Sushin Shyam","role":"Music Director"},{"name":"2D Entertainment","role":"Banner"}]'
+where not exists(select 1 from movies where lower(title) = 'scene');
+
+-- ============================================================
+-- Kukatpally: three single-screen cinemas (Arjun, Sri Bhramaramba, Mallikarjuna) and three mall multiplexes
+-- (Lulu, Nexus, Lakeshore) with several screens each. Nothing existing is removed or rewritten: theatres are added by
+-- name only when missing, screens and starter shows only where a screen has none, and the one-time clean-up below
+-- is guarded by app_flags. The daily scheduler then repeats the starter shows across the rolling window and
+-- rebalanceByRecency shares the Telugu screens between films by how recent each release is.
+-- Screens: Lulu 10 and Lakeshore 9 as reported for those cinemas; Nexus 8 is an estimate.
+-- ============================================================
+insert into theatres(name,address,city_id,latitude,longitude,theatre_type)
+select 'Arjun Theatre','Arjun Theatre 2K 3D, Kukatpally, Hyderabad',c.id,17.4855,78.4095,'SINGLE'
+from cities c where c.name='Hyderabad' and not exists(select 1 from theatres t where t.name='Arjun Theatre');
+
+with f as (insert into app_flags(flag) values('kukatpally_cinemas_2026_11_07') on conflict do nothing returning 1)
+update theatres t set
+  theatre_type = case when t.name in ('Arjun Theatre','Sri Bhramaramba Cinema Hall','Mallikarjuna Theatre') then 'SINGLE' else 'MULTIPLEX' end,
+  active = true,
+  address = case t.name
+    when 'Cinepolis Lulu Mall' then 'Lulu Mall, Kukatpally, Hyderabad'
+    when 'PVR Nexus Mall' then 'Nexus Mall (Forum Sujana), KPHB Phase 6, Kukatpally, Hyderabad'
+    when 'PVR LakeShore Mall' then 'Lakeshore Mall, Y Junction, Kukatpally, Hyderabad'
+    when 'Sri Bhramaramba Cinema Hall' then 'Bhramaramba 70MM, Kukatpally, Hyderabad'
+    when 'Mallikarjuna Theatre' then 'Mallikarjuna 70MM, Kukatpally, Hyderabad'
+    else t.address end
+where exists(select 1 from f)
+  and t.name in ('Arjun Theatre','Sri Bhramaramba Cinema Hall','Mallikarjuna Theatre','Cinepolis Lulu Mall','PVR Nexus Mall','PVR LakeShore Mall');
+
+insert into screens(name,total_seats,theatre_id)
+select 'Screen ' || g, 150, t.id
+from theatres t
+join (values ('Arjun Theatre',1),('Sri Bhramaramba Cinema Hall',1),('Mallikarjuna Theatre',1),
+             ('Cinepolis Lulu Mall',10),('PVR LakeShore Mall',9),('PVR Nexus Mall',8)) v(name,cnt) on v.name = t.name
+cross join generate_series(1,10) g
+where g <= v.cnt and not exists(select 1 from screens s where s.theatre_id = t.id and s.name = 'Screen ' || g);
+
+-- Starter shows (four a day) for any of these screens that has none yet. On a mall, the first 70% of its screens play
+-- Telugu films and the rest play other languages (when none is running, they play Telugu too). Start times are staggered screen by screen.
+insert into shows(movie_id,screen_id,show_date,start_time,end_time,price,format,language)
+select mv.id, sc.id, (now() at time zone 'Asia/Kolkata')::date + 1,
+       sl.st + (sc.k % 4) * interval '15 minutes',
+       sl.st + (sc.k % 4) * interval '15 minutes' + interval '2 hours 30 minutes',
+       case when sc.theatre_type = 'MULTIPLEX' then 150 else 100 end,
+       case when sc.theatre_type = 'MULTIPLEX' and sl.st >= time '18:00' then '3D' else '2D' end,
+       mv.language
+from (
+  select z.* from (
+    select s.id, t.theatre_type,
+           row_number() over (partition by t.id order by s.id) k,
+           count(*) over (partition by t.id) n
+    from screens s join theatres t on t.id = s.theatre_id
+    where t.name in ('Arjun Theatre','Sri Bhramaramba Cinema Hall','Mallikarjuna Theatre','Cinepolis Lulu Mall','PVR LakeShore Mall','PVR Nexus Mall')
+  ) z
+  where not exists(select 1 from shows x where x.screen_id = z.id)
+) sc
+cross join (values (1,time '10:30'),(2,time '14:00'),(3,time '18:30'),(4,time '21:15')) as sl(n,st)
+cross join lateral (
+  select m.id, m.language
+  from movies m
+  where m.active = true and m.upcoming = false
+    and (m.language = 'Telugu') = not (sc.n >= 5 and sc.k > ceil(sc.n * 0.7) and exists(select 1 from movies o where o.active = true and o.upcoming = false and o.language <> 'Telugu'))
+  order by m.id
+  offset (sc.k + sl.n) % greatest((select count(*) from movies m2 where m2.active = true and m2.upcoming = false
+                                     and (m2.language = 'Telugu') = not (sc.n >= 5 and sc.k > ceil(sc.n * 0.7) and exists(select 1 from movies o where o.active = true and o.upcoming = false and o.language <> 'Telugu'))), 1)
+  limit 1
+) mv;
+
+insert into show_seats(show_id,seat_number,seat_type)
+select sh.id, chr(65 + r) || n::text, case when r < 4 then 'PREMIUM' else 'REGULAR' end
+from shows sh cross join generate_series(0,9) r cross join generate_series(1,15) n
+where (select count(*) from show_seats ss where ss.show_id = sh.id) < 150
+on conflict (show_id,seat_number) do nothing;
+
+-- Ramayana plays in many languages and formats (see ReleaseVariants / ShowWindowScheduler.applyReleaseVariants).
+update movies set multi_format = true where lower(title) = 'ramayana' and multi_format = false;
+
+-- Languages each film is released in (only fills films that have none yet, so later edits stay). Ramayana is released in many;
+-- Ranabaali has a 5-language theatrical run; The Paradise is announced in several; Scene (Suriya) is set to Telugu and Tamil;
+-- every other film plays in its own language only.
+update movies set show_languages = case lower(title)
+    when 'ramayana' then 'Telugu, Hindi, Tamil, English, Kannada, Malayalam'
+    when 'ranabaali' then 'Telugu, Hindi, Tamil, Kannada, Malayalam'
+    when 'the paradise' then 'Telugu, Hindi, Tamil, English, Kannada, Malayalam'
+    when 'scene' then 'Telugu, Tamil'
+  end
+where show_languages is null and lower(title) in ('ramayana','ranabaali','the paradise','scene');

@@ -1,0 +1,54 @@
+package com.sujaytumu.bms.controller;
+
+import com.sujaytumu.bms.service.UserService;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+public class AuthController {
+
+    private final UserService userService;
+
+    public AuthController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/api/auth/register")
+    public Map<String, Object> register(@RequestBody Map<String, String> body) {
+        return userService.register(body.get("name"), body.get("email"), body.get("password"));
+    }
+
+    @PostMapping("/api/auth/login")
+    public Map<String, Object> login(@RequestBody Map<String, String> body) {
+        return userService.login(body.get("email"), body.get("password"));
+    }
+
+    @PostMapping("/api/auth/forgot")
+    public Map<String, Object> forgot(@RequestBody Map<String, String> body) {
+        return userService.requestPasswordOtp(body.get("email"));
+    }
+
+    @PostMapping("/api/auth/reset")
+    public Map<String, Object> reset(@RequestBody Map<String, String> body) {
+        return userService.resetPassword(body.get("email"), body.get("otp"), body.get("newPassword"));
+    }
+
+    @PostMapping("/api/auth/remember")
+    public Map<String, Object> remember(@RequestBody Map<String, String> body) {
+        return userService.rememberDevice(body.get("email"), body.get("password"));
+    }
+
+    @PostMapping("/api/auth/device-login")
+    public Map<String, Object> deviceLogin(@RequestBody Map<String, String> body) {
+        return userService.deviceLogin(body.get("deviceToken"));
+    }
+
+    @PostMapping("/api/auth/forget-device")
+    public Map<String, Object> forgetDevice(@RequestBody Map<String, String> body) {
+        userService.forgetDevice(body.get("deviceToken"));
+        return Map.of("message", "Removed");
+    }
+}

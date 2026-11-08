@@ -1,0 +1,26 @@
+# Backend (Maven)
+backend/target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+!frontend/android/gradle/wrapper/gradle-wrapper.jar
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Capacitor / Android build output
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/app/src/main/assets/capacitor.plugins.json

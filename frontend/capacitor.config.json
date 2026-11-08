@@ -1,0 +1,23 @@
+{
+  "appId": "com.sujaytumu.bookmyshow",
+  "appName": "Book My Show",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "url": "https://book-my-show-nu-three.vercel.app",
+    "allowNavigation": [
+      "book-my-show-nu-three.vercel.app",
+      "*.onrender.com",
+      "*.razorpay.com",
+      "*.razorpay.in"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false
+    }
+  }
+}
